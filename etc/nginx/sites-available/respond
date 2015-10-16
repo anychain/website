@@ -1,0 +1,20 @@
+server {
+    # the port your site will be served on
+    listen      443 ssl;
+    server_name respond.esse.io;
+    access_log /var/log/nginx/respond.access.log;
+    error_log  /var/log/nginx/respond.error.log;
+    ssl_certificate         /etc/nginx/ssl/esse-io.crt;
+    ssl_certificate_key     /etc/nginx/ssl/esse-io.key;
+    charset     utf-8;
+
+    #Max upload size
+    client_max_body_size 75M;   # adjust to taste
+
+    # respond web
+    location / {
+        index index.html;  
+        root  /var/www/apps/sites/respond;
+    }
+}
+

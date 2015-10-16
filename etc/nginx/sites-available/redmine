@@ -1,0 +1,18 @@
+server {
+    # edp
+    listen      443 ssl;
+    # ssl on;
+    server_name pm.esse.io;
+    access_log /var/log/nginx/esse-redmine.access.log;
+    error_log  /var/log/nginx/esse-redmine.error.log;
+    ssl_certificate         /etc/nginx/ssl/esse-io.crt;
+    ssl_certificate_key     /etc/nginx/ssl/esse-io.key;
+    charset     utf-8;
+    location / {
+            proxy_pass http://localhost:3000;
+            proxy_redirect     off;
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Forwarded-Host $server_name;
+            proxy_set_header   X-Forwarded-Proto $scheme;
+        }
+}

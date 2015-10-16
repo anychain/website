@@ -1,0 +1,19 @@
+
+server {
+    # edp
+    listen      443 ssl;
+    # ssl on;
+    server_name edp.esse.io;
+    access_log /var/log/nginx/esse-edp.access.log;
+    error_log  /var/log/nginx/esse-edp.error.log;
+    ssl_certificate         /etc/nginx/ssl/esse-io.crt;
+    ssl_certificate_key     /etc/nginx/ssl/esse-io.key;
+    charset     utf-8;
+    location / {
+            proxy_pass http://ambari;
+            proxy_redirect     off;
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Forwarded-Host $server_name;
+            proxy_set_header   X-Forwarded-Proto $scheme;
+        }
+}
