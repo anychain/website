@@ -1,0 +1,91 @@
+upstream php {
+    server unix:/var/run/php5-fpm.sock;
+#   server 127.0.0.1:9000;
+}
+
+server {
+    # the port your site will be served on
+    listen *:443 ssl;
+    listen [::]:443 ssl;
+    server_name respond.esse.io;
+    access_log /var/log/nginx/wordpress.access.log;
+    error_log  /var/log/nginx/wordpress.error.log;
+    ssl_certificate         /etc/nginx/ssl/esse-io.crt;
+    ssl_certificate_key     /etc/nginx/ssl/esse-io.key;
+    ssl_dhparam /etc/nginx/ssl/dhparam.pem;
+    # Enable HSTS. This forces SSL on clients that respect it, most modern browsers. The includeSubDomains flag is optional.
+    # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains";
+
+    # Set caches, protocols, and accepted ciphers. This config will merit an A+ SSL Labs score as of Sept 2015.
+    ssl_session_cache shared:SSL:20m;
+    ssl_session_timeout 10m;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'ECDH+AESGCM:ECDH+AES256:ECDH+AES128:DH+3DES:!ADH:!AECDH:!MD5';
+
+    charset     utf-8;
+
+    index index.php
+    include global/restrictions.conf;
+    include global/wordpress.conf;
+
+    # No to robots
+    add_header  X-Robots-Tag "noindex, nofollow, nosnippet, noarchive";
+    ## Cache control. Useful for WP super cache.
+    add_header Cache-Control "store, must-revalidate, post-check=0, pre-check=0";
+
+    #Max upload size
+    client_max_body_size 75M;   # adjust to taste
+
+    root /var/www/wordpress;
+
+# WP Super Cache rules.
+# Designed to be included from a 'wordpress-ms-...' configuration file.
+
+set $cache_uri $request_uri;
+
+# POST requests and urls with a query string should always go to PHP
+if ($request_method = POST) {
+        set $cache_uri 'null cache';
+}
+
+if ($query_string != "") {
+        set $cache_uri 'null cache';
+}
+
+# Don't cache uris containing the following segments
+if ($request_uri ~* "(/wp-admin/|/xmlrpc.php|/wp-(app|cron|login|register|mail).php|wp-.*.php|/feed/|index.php|wp-comments-popup.php|wp-links-opml.php|wp-locations.php|sitemap(_index)?.xml|[a-z0-9_-]+-sitemap([0-9]+)?.xml)") {
+        set $cache_uri 'null cache';
+}
+
+# Don't use the cache for logged in users or recent commenters
+if ($http_cookie ~* "comment_author|wordpress_[a-f0-9]+|wp-postpass|wordpress_logged_in") {
+        set $cache_uri 'null cache';
+}
+
+# START MOBILE
+# Mobile browsers section to server them non-cached version. COMMENTED by default as most modern wordpress themes including twenty-eleven are responsive. Uncomment config lines in this section if you want to use a plugin like WP-Touch
+# if ($http_x_wap_profile) {
+#        set $cache_uri 'null cache';
+#}
+
+#if ($http_profile) {
+#        set $cache_uri 'null cache';
+#}
+
+#if ($http_user_agent ~* (2.0\ MMP|240x320|400X240|AvantGo|BlackBerry|Blazer|Cellphone|Danger|DoCoMo|Elaine/3.0|EudoraWeb|Googlebot-Mobile|hiptop|IEMobile|KYOCERA/WX310K|LG/U990|MIDP-2.|MMEF20|MOT-V|NetFront|Newt|Nintendo\ Wii|Nitro|Nokia|Opera\ Mini|Palm|PlayStation\ Portable|portalmmm|Proxinet|ProxiNet|SHARP-TQ-GX10|SHG-i900|Small|SonyEricsson|Symbian\ OS|SymbianOS|TS21i-10|UP.Browser|UP.Link|webOS|Windows\ CE|WinWAP|YahooSeeker/M1A1-R2D2|iPhone|iPod|Android|BlackBerry9530|LG-TU915\ Obigo|LGE\ VX|webOS|Nokia5800)) {
+ #       set $cache_uri 'null cache';
+#}
+
+#if ($http_user_agent ~* (w3c\ |w3c-|acs-|alav|alca|amoi|audi|avan|benq|bird|blac|blaz|brew|cell|cldc|cmd-|dang|doco|eric|hipt|htc_|inno|ipaq|ipod|jigs|kddi|keji|leno|lg-c|lg-d|lg-g|lge-|lg/u|maui|maxo|midp|mits|mmef|mobi|mot-|moto|mwbp|nec-|newt|noki|palm|pana|pant|phil|play|port|prox|qwap|sage|sams|sany|sch-|sec-|send|seri|sgh-|shar|sie-|siem|smal|smar|sony|sph-|symb|t-mo|teli|tim-|tosh|tsm-|upg1|upsi|vk-v|voda|wap-|wapa|wapi|wapp|wapr|webc|winw|winw|xda\ |xda-)) {
+  #      set $cache_uri 'null cache';
+#}
+#END MOBILE
+
+# Use cached or actual file if they exists, otherwise pass request to WordPress
+location / {
+        try_files /wp-content/cache/supercache/$http_host/$cache_uri/index.html $uri $uri/ /index.php?$args ;
+}
+
+}
+
